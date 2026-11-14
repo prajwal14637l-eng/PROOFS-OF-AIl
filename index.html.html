@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ProofOps AI</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--mut:#5d6675;--line:#e1e5eb;--acc:#0b6b5c;--acc2:#e6f4f1;--ok:#17803d;--warn:#b45309;--bad:#b91c1c;--okb:#e7f6ec;--warnb:#fdf1dc;--badb:#fde8e8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1318;--card:#181d24;--ink:#eef1f5;--mut:#9aa4b2;--line:#2a313b;--acc:#3ec3a9;--acc2:#12302b;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--okb:#12301d;--warnb:#33270e;--badb:#361616}}
+:root[data-theme="dark"]{--bg:#0f1318;--card:#181d24;--ink:#eef1f5;--mut:#9aa4b2;--line:#2a313b;--acc:#3ec3a9;--acc2:#12302b;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--okb:#12301d;--warnb:#33270e;--badb:#361616}
+*{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:20px;margin:0}h1 span{color:var(--acc)}h2{font-size:17px;margin:0 0 8px}h3{font-size:14px;margin:14px 0 6px}
+.tag{font-size:12px;color:var(--mut)}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:14px}
+.tabs button{flex:1;white-space:nowrap}
+button,.btn{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 14px;border-radius:10px;cursor:pointer}
+button.on,button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+button.bad{background:var(--bad);color:#fff;border-color:var(--bad)}button.sm{padding:5px 10px;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 150px}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 3px}
+input[type=text],input[type=number],select,textarea{width:100%;font:inherit;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.pill{display:inline-block;font-size:12px;padding:2px 9px;border-radius:99px;background:var(--acc2);color:var(--acc);font-weight:600}
+.pill.ok{background:var(--okb);color:var(--ok)}.pill.warn{background:var(--warnb);color:var(--warn)}.pill.bad{background:var(--badb);color:var(--bad)}
+.job{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--line)}.job:first-of-type{border-top:0}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.slot{border:1px dashed var(--line);border-radius:10px;padding:8px;font-size:12px;text-align:center}
+.slot img{width:100%;height:90px;object-fit:cover;border-radius:6px;display:block;margin-bottom:4px}
+.slot .ph{height:90px;display:flex;align-items:center;justify-content:center;color:var(--mut)}
+.chk{display:flex;gap:8px;align-items:center;padding:4px 0}
+.find{display:flex;gap:10px;padding:8px 10px;border-radius:10px;margin:6px 0;font-size:14px}
+.find.pass{background:var(--okb)}.find.warn{background:var(--warnb)}.find.fail{background:var(--badb)}.find b{display:block}
+.note{font-size:12px;color:var(--mut)}.empty{color:var(--mut);padding:8px 0}
+.banner{padding:12px;border-radius:12px;font-weight:600;margin:8px 0}
+.banner.ok{background:var(--okb);color:var(--ok)}.banner.warn{background:var(--warnb);color:var(--warn)}.banner.bad{background:var(--badb);color:var(--bad)}
+.hist{font-size:13px;color:var(--mut);padding-left:18px;margin:4px 0}
+@media print{header,.tabs,.noprint{display:none!important}body{background:#fff;color:#000}.card{border:1px solid #bbb}}
+</style></head><body><div class="wrap">
+<header><h1>ProofOps <span>AI</span></h1><span class="tag">Don’t just report work. Prove it.</span></header>
+<div class="tabs" id="tabs"></div><div id="app"></div>
+<p class="note noprint">Demo build: data stays in this browser. The AI check here uses rule-based evidence checks; a multimodal vision model is the production plan. No accuracy claims are made.</p>
+</div>
+<script>
+const SLOTS=[["before","Before: unit overview"],["nameplate","Nameplate"],["filter","Air filter"],["coil","Coil condition"],["after","After: unit overview"]];
+const CHK=[["panel","Electrical panel inspected"],["filter","Filter cleaned or replaced"],["coil","Coil cleaned"],["drain","Condensate drain cleared"],["loto","Lockout/tagout applied before opening panel"]];
+const ROLES=[["admin","Company admin"],["tech","Technician"],["sup","Supervisor"]];
+const LBL={assigned:["Assigned",""],draft:["In progress",""],submitted:["Awaiting review","warn"],more:["More evidence requested","warn"],approved:["Approved","ok"],rejected:["Rejected","bad"]};
+let S={role:"admin",jobId:null,report:null,jobs:[]};
+try{const x=JSON.parse(localStorage.getItem("proofops")||"null");if(x&&x.jobs)S=x}catch(e){}
+const save=()=>{try{localStorage.setItem("proofops",JSON.stringify(S))}catch(e){}};
+const $=s=>document.querySelector(s),esc=t=>String(t==null?"":t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=t=>new Date(t).toLocaleString([], {dateStyle:"medium",timeStyle:"short"});
+const J=id=>S.jobs.find(j=>j.id===id);
+function newJob(f){return{id:"J-"+(1000+S.jobs.length+1),site:f.site,asset:f.asset,rated:+f.rated||12,tech:f.tech||"Technician",created:Date.now(),status:"assigned",photos:{},check:{},read:{},permit:null,loc:null,notes:"",ai:null,review:null,hist:[["Job created",Date.now()]]}}
+if(!S.jobs.length){S.jobs.push(newJob({site:"Orion Mall, Bengaluru",asset:"AHU-03 (rooftop)",rated:12,tech:"Ravi K."}))}
+function log(j,t){j.hist.push([t,Date.now()])}
+
+// ---- Evidence engine ----
+function runChecks(j){
+ const R=[],add=(n,s,m,cat)=>R.push({n,s,m,cat:cat||""});
+ const miss=SLOTS.filter(([k])=>!j.photos[k]).map(s=>s[1]);
+ add("Required photos present",miss.length?"fail":"pass",miss.length?"Missing: "+miss.join(", "):"All 5 required photos attached","miss");
+ const mc=CHK.filter(([k])=>j.check[k]===undefined).map(c=>c[1]);
+ add("Checklist fields complete",mc.length?"fail":"pass",mc.length?mc.length+" item(s) unanswered":"Every checklist item answered","miss");
+ add("Required documents",j.permit?"pass":"fail",j.permit?"Work permit attached: "+j.permit:"Work permit not attached","miss");
+ const r=j.read,ks=["supply","ret","amps","press"],mr=ks.filter(k=>r[k]===undefined||r[k]==="");
+ if(mr.length)add("Readings consistent","fail","Missing readings: "+mr.join(", "),"miss");
+ else{const p=[],d=r.ret-r.supply;
+  if(d<6||d>14)p.push("Temperature drop is "+d.toFixed(1)+"°C (expected about 6 to 14)");
+  if(Math.abs(r.amps-j.rated)/j.rated>0.15)p.push("Current "+r.amps+" A is more than 15% from rated "+j.rated+" A");
+  if(r.press<100||r.press>150)p.push("Suction pressure "+r.press+" psi outside 100 to 150");
+  add("Readings consistent",p.length?"warn":"pass",p.length?p.join(". "):"Readings agree with each other and the asset rating","inc")}
+ const ph=SLOTS.map(([k])=>[k,j.photos[k]]).filter(x=>x[1]),dups=[];
+ for(let a=0;a<ph.length;a++)for(let b=a+1;b<ph.length;b++){const same=ph[a][1].hash===ph[b][1].hash||ham(ph[a][1].hash,ph[b][1].hash)<=4;if(same)dups.push([ph[a][0],ph[b][0]])}
+ const dupsX=dups.filter(d=>!(d[0]==="before"&&d[1]==="after"));
+ add("Duplicate photos",dupsX.length?"fail":"pass",dupsX.length?"Look identical: "+dupsX.map(d=>d.join(" & ")).join("; "):"No reused images found","inc");
+ const ba=j.photos.before&&j.photos.after;
+ const same=ba&&ham(j.photos.before.hash,j.photos.after.hash)<=4;
+ const claimed=j.check.filter||j.check.coil;
+ add("Before/after consistency",same&&claimed?"warn":"pass",same&&claimed?"Before and after look the same although cleaning or replacement was claimed":ba?"Before and after differ, or no change was claimed":"Needs both photos","inc");
+ const bad=ph.filter(([k,p])=>p.ts<j.created-60000||p.ts>Date.now()+60000);
+ add("Timestamp anomalies",bad.length?"warn":"pass",bad.length?bad.map(b=>b[0]).join(", ")+" photo(s) captured before the job was created":"All photos taken after job creation","inc");
+ add("Location consistency",j.loc===null?"fail":j.loc==="denied"?"warn":"pass",j.loc===null?"Location consent step not completed":j.loc==="denied"?"Technician declined location capture; review manually":"Location captured with consent ("+j.loc+")",j.loc===null?"miss":"inc");
+ const dark=ph.filter(([k,p])=>p.lum<25||p.w<200);
+ add("Image quality and relevance",dark.length?"warn":"pass",dark.length?dark.map(d=>d[0]).join(", ")+" too dark or small to judge. (Demo checks quality only; relevance needs the vision model.)":"Images usable. Relevance is judged by the vision model in production.","inc");
+ const lotoBad=j.check.loto===false||(j.check.panel&&j.check.loto===false);
+ add("Work-instruction compliance",lotoBad?"fail":"pass",lotoBad?"Safety instruction violated: lockout/tagout not applied":"No instruction violations reported","safe");
+ let state="Evidence complete";
+ if(R.some(x=>x.cat==="miss"&&x.s!=="pass"))state="Additional evidence required";
+ if(R.some(x=>x.cat==="inc"&&x.s!=="pass"))state="Potential inconsistency";
+ if(R.some(x=>x.cat==="safe"&&x.s!=="pass"))state="Human inspection required";
+ return{results:R,state,at:Date.now()}}
+function ham(a,b){let d=0;for(let i=0;i<a.length;i++)if(a[i]!==b[i])d++;return d}
+function stCls(s){return s==="Evidence complete"?"ok":s==="Additional evidence required"?"warn":"bad"}
+
+// ---- Images ----
+function procImg(src,ts){return new Promise(res=>{const im=new Image();im.onload=()=>{const sc=Math.min(1,480/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*sc|0;c.height=im.height*sc|0;c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+ const t=document.createElement("canvas");t.width=t.height=8;const x=t.getContext("2d");x.drawImage(im,0,0,8,8);const d=x.getImageData(0,0,8,8).data,g=[];for(let i=0;i<64;i++)g.push(d[i*4]*.3+d[i*4+1]*.59+d[i*4+2]*.11);const m=g.reduce((a,b)=>a+b)/64;
+ res({data:c.toDataURL("image/jpeg",.6),hash:g.map(v=>v>m?1:0).join(""),ts,lum:m,w:im.width})};im.src=src})}
+function sample(label,seed){const c=document.createElement("canvas");c.width=320;c.height=220;const x=c.getContext("2d");
+ const h=seed*67%360;x.fillStyle="hsl("+h+",35%,32%)";x.fillRect(0,0,320,220);
+ for(let i=0;i<14;i++){x.fillStyle="hsla("+(h+i*13)%360+",50%,"+(30+i*3)+"%,.8)";x.fillRect((seed*37+i*53)%260,(seed*29+i*41)%170,20+i*5,14+i*4)}
+ x.fillStyle="#fff";x.font="bold 18px sans-serif";x.fillText(label,12,206);return c.toDataURL("image/png")}
+async function fillSample(j,bad){
+ for(let i=0;i<SLOTS.length;i++){const[k,l]=SLOTS[i];const seed=(bad&&k==="after")?1:i+1;j.photos[k]=await procImg(sample(l,seed),Date.now())}
+ CHK.forEach(([k])=>j.check[k]=true);
+ j.read=bad?{supply:14,ret:17,amps:15.8,press:90}:{supply:12,ret:21,amps:11.6,press:128};
+ j.permit="permit-"+j.id+".pdf";j.loc="12.97, 77.59";j.notes="Routine quarterly PM completed."}
+
+// ---- Rendering ----
+function render(){
+ $("#tabs").innerHTML=ROLES.map(([k,l])=>`<button class="${S.role===k?"on":""}" data-act="role" data-v="${k}">${l}</button>`).join("");
+ const a=$("#app");
+ if(S.report){a.innerHTML=reportView(J(S.report));return}
+ a.innerHTML=S.role==="admin"?adminView():S.role==="tech"?techView():supView();save()}
+function jobRow(j,btn){const[l,c]=LBL[j.status];return`<div class="job"><div><b>${esc(j.id)}</b> · ${esc(j.site)}<div class="note">${esc(j.asset)} · ${esc(j.tech)} · ${fmt(j.created)}</div></div><div><span class="pill ${c}">${l}</span> ${btn||""}${["approved","rejected"].includes(j.status)?`<button class="sm" data-act="report" data-v="${j.id}">Report</button>`:""}</div></div>`}
+function adminView(){return`<div class="card"><h2>Create job</h2><div class="row"><div><label>Site</label><input type="text" id="n-site" value="Phoenix Marketcity, Pune"></div><div><label>Asset</label><input type="text" id="n-asset" value="Chiller CH-1"></div></div><div class="row"><div><label>Technician</label><input type="text" id="n-tech" value="Asha M."></div><div><label>Rated current (A)</label><input type="number" id="n-rated" value="12"></div></div>
+<label>Template</label><select><option>HVAC preventive maintenance</option></select><p class="note">Required evidence: 5 photos, 5 checklist items, 4 readings, work permit, location consent.</p><button class="pri" data-act="create">Create and assign</button></div>
+<div class="card"><h2>All jobs</h2>${S.jobs.length?S.jobs.slice().reverse().map(j=>jobRow(j)).join(""):'<div class="empty">No jobs yet</div>'}<p class="note"><button class="sm" data-act="reset">Reset demo data</button></p></div>`}
+function techView(){
+ const open=S.jobs.filter(j=>["assigned","draft","more"].includes(j.status));
+ const j=J(S.jobId);
+ if(!j||!open.includes(j))return`<div class="card"><h2>My jobs</h2>${open.length?open.map(x=>jobRow(x,`<button class="sm pri" data-act="open" data-v="${x.id}">Open</button>`)).join(""):'<div class="empty">No open jobs. Ask the admin to create one.</div>'}</div>`;
+ const rd=(k,l,u)=>`<div><label>${l}</label><input type="number" step="0.1" data-f="read.${k}" value="${esc(j.read[k])}" placeholder="${u}"></div>`;
+ return`<div class="card"><button class="sm" data-act="back">← Jobs</button><h2 style="margin-top:8px">${esc(j.id)} · ${esc(j.asset)}</h2><div class="note">${esc(j.site)} · rated ${j.rated} A</div>
+${j.status==="more"?`<div class="banner warn">Supervisor asked for more evidence: ${esc(j.review&&j.review.note||"see findings")}</div>`:""}
+<p class="noprint"><button class="sm" data-act="sample" data-v="0">Fill sample (clean)</button> <button class="sm" data-act="sample" data-v="1">Fill sample (with issues)</button></p>
+<h3>Photos</h3><div class="slots">${SLOTS.map(([k,l])=>{const p=j.photos[k];return`<label class="slot" style="margin:0;color:inherit">${p?`<img src="${p.data}" alt="">`:'<div class="ph">Tap to capture</div>'}${l}<input type="file" accept="image/*" capture="environment" hidden data-slot="${k}"></label>`}).join("")}</div>
+<h3>Checklist</h3>${CHK.map(([k,l])=>`<div class="chk"><span style="flex:1">${l}</span><button class="sm ${j.check[k]===true?"pri":""}" data-act="chk" data-k="${k}" data-v="1">Yes</button><button class="sm ${j.check[k]===false?"bad":""}" data-act="chk" data-k="${k}" data-v="0">No</button></div>`).join("")}
+<h3>Readings</h3><div class="row">${rd("supply","Supply air temp (°C)","e.g. 12")}${rd("ret","Return air temp (°C)","e.g. 21")}${rd("amps","Compressor current (A)","e.g. 11.5")}${rd("press","Suction pressure (psi)","e.g. 125")}</div>
+<h3>Permit and location</h3><div class="row"><div><label>Work permit (any file)</label><input type="file" data-permit="1">${j.permit?`<div class="note">Attached: ${esc(j.permit)}</div>`:""}</div><div><label>Location (consent-based)</label><button class="sm" data-act="loc">Share location</button> <button class="sm" data-act="locno">Decline</button><div class="note">${j.loc===null?"Not captured":j.loc==="denied"?"Declined":esc(j.loc)}</div></div></div>
+<label>Notes</label><textarea rows="2" data-f="notes">${esc(j.notes)}</textarea>
+<p class="noprint"><button data-act="check">Run AI check</button> <button class="pri" data-act="submit">Submit for review</button></p>${j.ai?findings(j.ai):""}</div>`}
+function findings(ai){return`<div class="banner ${stCls(ai.state)}">AI check: ${ai.state}</div><div class="note">AI flags, humans confirm. Technical quality is never certified from photographs alone.</div>`+ai.results.map(r=>`<div class="find ${r.s}"><div>${r.s==="pass"?"✓":r.s==="warn"?"!":"✕"}</div><div><b>${r.n}</b>${esc(r.m)}</div></div>`).join("")}
+function supView(){
+ const j=J(S.jobId),q=S.jobs.filter(x=>x.status==="submitted");
+ if(!j||j.status!=="submitted")return`<div class="card"><h2>Review queue</h2>${q.length?q.map(x=>jobRow(x,`<button class="sm pri" data-act="open" data-v="${x.id}">Review</button>`)).join(""):'<div class="empty">Nothing waiting for review.</div>'}</div><div class="card"><h2>Decided</h2>${S.jobs.filter(x=>["approved","rejected"].includes(x.status)).map(x=>jobRow(x)).join("")||'<div class="empty">No decisions yet</div>'}</div>`;
+ return`<div class="card"><button class="sm" data-act="back">← Queue</button><h2 style="margin-top:8px">${esc(j.id)} · ${esc(j.asset)}</h2><div class="note">${esc(j.site)} · by ${esc(j.tech)}</div>
+<div class="slots" style="margin-top:10px">${SLOTS.map(([k,l])=>{const p=j.photos[k];return`<div class="slot">${p?`<img src="${p.data}" alt="">`:'<div class="ph">Missing</div>'}${l}</div>`}).join("")}</div>
+<h3>Readings</h3><div class="note">Supply ${j.read.supply}°C · Return ${j.read.ret}°C · ${j.read.amps} A · ${j.read.press} psi</div>
+<h3>AI findings</h3>${findings(j.ai)}
+<h3>Your decision</h3><label>Note or corrective action</label><textarea rows="2" id="rv-note" placeholder="Required when rejecting or requesting evidence"></textarea>
+<p><button class="pri" data-act="decide" data-v="approved">Approve</button> <button data-act="decide" data-v="more">Request more evidence</button> <button class="bad" data-act="decide" data-v="rejected">Reject</button></p></div>`}
+function reportView(j){const[l,c]=LBL[j.status];return`<div class="card"><p class="noprint"><button class="sm" data-act="closerep">← Back</button> <button class="sm pri" data-act="print">Print or save as PDF</button></p>
+<h2>Verified job report · ${esc(j.id)}</h2><span class="pill ${c}">${l}</span><div class="note" style="margin-top:6px">${esc(j.site)} · ${esc(j.asset)} · Technician ${esc(j.tech)} · Created ${fmt(j.created)}</div>
+<div class="slots" style="margin-top:10px">${SLOTS.map(([k,l])=>{const p=j.photos[k];return`<div class="slot">${p?`<img src="${p.data}" alt="">`:""}${l}</div>`}).join("")}</div>
+<h3>Checklist</h3>${CHK.map(([k,t])=>`<div>${j.check[k]?"✓":"✕"} ${t}</div>`).join("")}
+<h3>Readings</h3><div>Supply ${j.read.supply}°C · Return ${j.read.ret}°C · ${j.read.amps} A (rated ${j.rated}) · ${j.read.press} psi</div>
+<h3>AI evidence check</h3>${j.ai?findings(j.ai):""}
+<h3>Supervisor decision</h3><div>${l}${j.review&&j.review.note?": "+esc(j.review.note):""}</div>
+<h3>Approval history</h3><ul class="hist">${j.hist.map(h=>`<li>${esc(h[0])} · ${fmt(h[1])}</li>`).join("")}</ul>
+<p class="note">Original evidence preserved. AI flags, humans confirm.</p></div>`}
+
+// ---- Events ----
+document.addEventListener("click",async e=>{const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act,v=b.dataset.v,j=J(S.jobId);
+ if(a==="role"){S.role=v;S.jobId=null;S.report=null}
+ else if(a==="create"){const f={site:$("#n-site").value,asset:$("#n-asset").value,tech:$("#n-tech").value,rated:$("#n-rated").value};if(!f.site||!f.asset)return;S.jobs.push(newJob(f))}
+ else if(a==="reset"){S.jobs=[];S.jobId=null;S.report=null;S.jobs.push(newJob({site:"Orion Mall, Bengaluru",asset:"AHU-03 (rooftop)",rated:12,tech:"Ravi K."}))}
+ else if(a==="open"){S.jobId=v}else if(a==="back"){S.jobId=null}
+ else if(a==="report"){S.report=v}else if(a==="closerep"){S.report=null}
+ else if(a==="print"){try{window.print()}catch(x){}return}
+ else if(a==="chk"){j.check[b.dataset.k]=v==="1";if(j.status==="assigned")j.status="draft"}
+ else if(a==="sample"){await fillSample(j,v==="1");if(j.status==="assigned")j.status="draft"}
+ else if(a==="loc"){if(!navigator.geolocation){j.loc="unavailable"}else{navigator.geolocation.getCurrentPosition(p=>{j.loc=p.coords.latitude.toFixed(2)+", "+p.coords.longitude.toFixed(2);render()},()=>{j.loc="denied";render()},{timeout:8000});return}}
+ else if(a==="locno"){j.loc="denied"}
+ else if(a==="check"){j.ai=runChecks(j)}
+ else if(a==="submit"){j.ai=runChecks(j);j.status="submitted";log(j,"Submitted by "+j.tech+" · AI: "+j.ai.state);S.jobId=null}
+ else if(a==="decide"){const n=$("#rv-note").value.trim();if(v!=="approved"&&!n){$("#rv-note").focus();$("#rv-note").placeholder="A note is required for this decision";return}
+  j.status=v;j.review={note:n,at:Date.now()};log(j,{approved:"Approved",rejected:"Rejected",more:"More evidence requested"}[v]+" by supervisor"+(n?": "+n:""));S.jobId=null}
+ render()});
+document.addEventListener("change",async e=>{const t=e.target,j=J(S.jobId);if(!j)return;
+ if(t.dataset.slot){const f=t.files[0];if(!f)return;const r=new FileReader();r.onload=async()=>{j.photos[t.dataset.slot]=await procImg(r.result,f.lastModified||Date.now());if(j.status==="assigned")j.status="draft";render()};r.readAsDataURL(f);return}
+ if(t.dataset.permit){j.permit=t.files[0]?t.files[0].name:null}
+ else if(t.dataset.f){const[o,k]=t.dataset.f.split(".");if(k)j[o][k]=t.value===""?"":+t.value;else j.notes=t.value;if(j.status==="assigned")j.status="draft"}
+ render()});
+render();
+</script></body></html>
